@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,7 +42,15 @@ oSK2Jd11bI8poOWBO05pAAAAFHJvb3RAZG9ja2VyLW1hc3Rlci0xAQ==
 	}
 	return ssh.PublicKeys(signer)
 }
+
+const NFS_SSH_PORT_ENV_NAME = "NFS_SSH_PORT"
+
 func markNfsDir(cli *client.Client, volumeId string) {
+	nfs_ssh_port, err := strconv.ParseInt(os.Getenv(NFS_SSH_PORT_ENV_NAME), 10, 64)
+	if err != nil {
+		nfs_ssh_port = 22
+	}
+
 	volumeData, _ := cli.VolumeInspect(context.Background(), volumeId)
 	if volumeData.Driver == "local" && volumeData.Options["type"] == "nfs" {
 		oList := strings.Split(volumeData.Options["o"], ",")
@@ -67,9 +76,10 @@ func markNfsDir(cli *client.Client, volumeId string) {
 				Timeout:         30 * time.Second,
 			}
 			// 建立SSH连接
-			sshClient, dialErr := ssh.Dial("tcp", addr+":22", sshConfig)
+			sshClient, dialErr := ssh.Dial("tcp", addr+":"+strconv.FormatInt(nfs_ssh_port, 10), sshConfig)
 			if dialErr != nil {
-				log.Fatalf("Failed to dial: %s", dialErr)
+				printHelp()
+				log.Fatalf("Failed to conn ssh: %s", dialErr)
 			}
 			defer sshClient.Close()
 			// 执行SSH命令
@@ -82,9 +92,15 @@ func markNfsDir(cli *client.Client, volumeId string) {
 			command := "mkdir -p " + device
 			comboErr := session.Run(command)
 			if comboErr != nil {
-				log.Fatalf("Failed to run: %s", comboErr)
+				log.Fatalf("Failed to mkdir: %s", comboErr)
 			}
 		}
+	}
+}
+func printHelp() {
+	data, err := os.ReadFile("/root/.ssh/id_ed25519")
+	if err == nil {
+		log.Info("请在NFS服务器上添加免密登录的公钥：" + string(data))
 	}
 }
 func main() {
@@ -93,6 +109,7 @@ func main() {
 		log.Errorf("Error create docker client: %s", err)
 		return
 	}
+	printHelp()
 	log.Info("Started.")
 	msgs, errs := cli.Events(context.Background(), events.ListOptions{})
 

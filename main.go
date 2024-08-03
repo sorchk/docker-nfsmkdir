@@ -17,7 +17,7 @@ import (
 )
 
 func markDir(path string) {
-	err := os.MkdirAll(path, 0755)
+	err := os.MkdirAll(path, 0777)
 	if err != nil {
 		log.Errorf("markDir: %s, Error: %v", path, err)
 	} else {
@@ -94,6 +94,8 @@ func markNfsDir(cli *client.Client, volumeId string) {
 			if comboErr != nil {
 				log.Fatalf("Failed to mkdir: %s", comboErr)
 			}
+			_ = session.Run("chmod -R 0777 " + device)
+			_ = session.Run("chown -R nobody:nobody " + device)
 		}
 	}
 }

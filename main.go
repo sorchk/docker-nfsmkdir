@@ -100,7 +100,7 @@ func markNfsDir(cli *client.Client, volumeId string) {
 	}
 }
 func printHelp() {
-	data, err := os.ReadFile("/root/.ssh/id_ed25519")
+	data, err := os.ReadFile("/root/.ssh/id_ed25519.pub")
 	if err == nil {
 		log.Info("请在NFS服务器上添加免密登录的公钥：" + string(data))
 	}

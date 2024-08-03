@@ -1,3 +1,5 @@
 docker/key.bak
 ssh
 build
+dist
+

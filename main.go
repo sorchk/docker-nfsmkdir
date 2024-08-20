@@ -36,14 +36,14 @@ func MkDirs(v *nfs.Target, dir string) {
 	log.Infof("nfs mkdir: %s\n", dir)
 }
 
-const NFS_HOST_ENV_NAM = "NFS_HOST"
-const NFS_PORT_ENV_NAM = "NFS_PORT"
-const NFS_PATH_ENV_NAM = "NFS_PATH"
+const NFS_HOST_ENV_NAME = "NFS_HOST"
+const NFS_PORT_ENV_NAME = "NFS_PORT"
+const NFS_PATH_ENV_NAME = "NFS_PATH"
 
 func markNfsDir(cli *client.Client, volumeId string) {
-	host := os.Getenv(NFS_HOST_ENV_NAM)
-	port := os.Getenv(NFS_PORT_ENV_NAM)
-	path := os.Getenv(NFS_PATH_ENV_NAM)
+	host := os.Getenv(NFS_HOST_ENV_NAME)
+	port := os.Getenv(NFS_PORT_ENV_NAME)
+	path := os.Getenv(NFS_PATH_ENV_NAME)
 
 	volumeData, _ := cli.VolumeInspect(context.Background(), volumeId)
 	if volumeData.Driver == "local" && volumeData.Options["type"] == "nfs" {

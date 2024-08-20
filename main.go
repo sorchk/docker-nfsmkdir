@@ -41,23 +41,37 @@ const NFS_PORT_ENV_NAME = "NFS_PORT"
 const NFS_PATH_ENV_NAME = "NFS_PATH"
 
 func markNfsDir(cli *client.Client, volumeId string) {
-	host := os.Getenv(NFS_HOST_ENV_NAME)
-	port := os.Getenv(NFS_PORT_ENV_NAME)
-	path := os.Getenv(NFS_PATH_ENV_NAME)
 
 	volumeData, _ := cli.VolumeInspect(context.Background(), volumeId)
 	if volumeData.Driver == "local" && volumeData.Options["type"] == "nfs" {
 		device := volumeData.Options["device"]
 		device = strings.TrimPrefix(device, ":")
-		device = strings.TrimPrefix(device, path)
-		device = strings.TrimPrefix(device, "/")
-		MkNfsDir(host, port, path, device)
+
+		host := os.Getenv(NFS_HOST_ENV_NAME)
+		port := os.Getenv(NFS_PORT_ENV_NAME)
+		path := os.Getenv(NFS_PATH_ENV_NAME)
+
+		paths := strings.Split(path, ",")
+		for _, p := range paths {
+			p = strings.TrimSpace(p)
+			if strings.HasPrefix(device, p) {
+				device = strings.TrimPrefix(device, path)
+				device = strings.TrimPrefix(device, "/")
+				MkNfsDir(host, port, p, device)
+				break
+			}
+		}
+
 	}
 
 }
 func MkNfsDir(ip string, port string, nfsPath string, dir string) {
 	// connect
-	mount, err := nfs.DialMount(ip+":"+port, false)
+	server := ip
+	if port != "" {
+		server += ":" + port
+	}
+	mount, err := nfs.DialMount(server, false)
 	if err != nil {
 		log.Errorf("unable to dial MOUNT service: %v\n", err)
 	}

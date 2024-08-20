@@ -3,7 +3,7 @@ name=dnam
 ver=$1
 build_date=$(date +"%Y%m%d")
 if [ -z "${ver}" ]; then
-  ver=0.1.0
+  ver=0.2.0
 fi
 echo ${ver}_${build_date}
 export DOCKER_CLI_EXPERIMENTAL=enabled
@@ -14,5 +14,7 @@ docker buildx build \
   --build-arg BUILD_DATE=${build_date} \
   --push \
   --tag sorc/${name}:${ver}_${build_date} \
-  --tag sorc/${name}:${ver} \
-  --tag sorc/${name}:latest .
+  --tag sorc/${name}:${ver} .
+
+  # --tag sorc/${name}:${ver} \
+  # --tag sorc/${name}:latest .

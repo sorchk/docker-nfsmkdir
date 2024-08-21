@@ -28,3 +28,22 @@ docker service create \
 --mount 'type=volume,source=nfs_nginx_test4,target=/wwwdata,volume-driver=local,volume-opt=type=nfs,volume-opt=device=:/datadisk/nfs/test/nginxtest4,volume-opt=o=addr=172.168.1.13' \
 nginx:latest
 
+
+docker service rm nfsmkdir
+docker service create \
+--name nfsmkdir \
+--mode global \
+--env NFS_HOST="172.168.1.13" \
+--env NFS_PATH="/datadisk/nfs/public,/datadisk/nfs/test" \
+--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
+--mount type=bind,src=/datadisk,dst=/datadisk \
+sorc/dnam:0.2.0
+
+
+docker service create \
+--name nginx9 \
+--replicas 1 \
+-e TZ="Asia/Shanghai" \
+--mount 'type=volume,source=nfs_nginx_test9,target=/wwwdata,volume-driver=local,volume-opt=type=nfs,volume-opt=device=:/datadisk/nfs/test/nginxtest9/ss1,volume-opt=o=addr=10.69.1.98' \
+nginx:latest
+docker service rm nginx9

@@ -25,12 +25,18 @@ func markDir(path string) {
 }
 
 func MkDirs(v *nfs.Target, dir string) {
+	f, _, err := v.Lookup(dir)
+	if err == nil && f.IsDir() {
+		// already exists
+		return
+	}
 	if _, err := v.Mkdir(dir, 0775); err != nil {
 		if err.Error() == "file does not exist" {
 			MkDirs(v, filepath.Dir(dir))
 			v.Mkdir(dir, 0775)
 		} else {
 			log.Errorf("nfs mkdir: %s, Error: %v\n", dir, err)
+			return
 		}
 	}
 	log.Infof("nfs mkdir: %s\n", dir)
@@ -55,8 +61,6 @@ func markNfsDir(cli *client.Client, volumeId string) {
 		for _, p := range paths {
 			p = strings.TrimSpace(p)
 			if strings.HasPrefix(device, p) {
-				device = strings.TrimPrefix(device, path)
-				device = strings.TrimPrefix(device, "/")
 				MkNfsDir(host, port, p, device)
 				break
 			}
@@ -66,6 +70,8 @@ func markNfsDir(cli *client.Client, volumeId string) {
 
 }
 func MkNfsDir(ip string, port string, nfsPath string, dir string) {
+	dir = strings.TrimPrefix(dir, nfsPath)
+	dir = strings.TrimPrefix(dir, "/")
 	// connect
 	server := ip
 	if port != "" {
@@ -88,6 +94,7 @@ func MkNfsDir(ip string, port string, nfsPath string, dir string) {
 	mount.Close()
 }
 func main() {
+	// MkNfsDir("172.168.1.13", "", "/datadisk/nfs/test", "/datadisk/nfs/test/aa/bb/cc2/")
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Errorf("Error create docker client: %s\n", err)

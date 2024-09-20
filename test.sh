@@ -33,7 +33,6 @@ docker service rm nfsmkdir
 docker service create \
 --name nfsmkdir \
 --mode global \
---env NFS_HOST="172.168.1.13" \
 --env NFS_PATH="/datadisk/nfs/public,/datadisk/nfs/test" \
 --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
 --mount type=bind,src=/datadisk,dst=/datadisk \

@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 FROM --platform=$BUILDPLATFORM alpine:3.9
 LABEL author=sorc@sction.org
 ARG TARGETOS

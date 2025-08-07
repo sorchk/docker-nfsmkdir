@@ -3,7 +3,7 @@ name=dnam
 ver=$1
 build_date=$(date +"%Y%m%d")
 if [ -z "${ver}" ]; then
-  ver=0.2.5
+  ver=0.2.6
 fi
 echo ${ver}_${build_date}
 export DOCKER_CLI_EXPERIMENTAL=enabled
@@ -17,7 +17,6 @@ docker buildx create --use --name mybuilder2 \
 --driver-opt env.http_proxy=http://10.10.10.41:2082 \
 --driver-opt env.https_proxy=http://10.10.10.41:2082
 docker buildx ls
-echo ${DOCKER_HUB_KEY} | docker login --username ${DOCKER_HUB_USER} --password-stdin
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   --build-arg VER=${ver} \

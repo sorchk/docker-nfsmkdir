@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -16,8 +18,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const NFS_PATH_ENV_NAME = "NFS_PATH"
+const DIR_PERM = "DIR_PERM"
+
+// const NFS_VERSION = "NFS_VERSION"
+
+//	func getNfsVersion() uint {
+//		nfsVersion := os.Getenv(NFS_VERSION)
+//		version, err := strconv.ParseUint(nfsVersion, 8, 32)
+//		if err != nil {
+//			return 3 // 默认权限
+//		}
+//		return uint(version)
+//	}
+func getDirPerm() os.FileMode {
+	dirPerm := os.Getenv(DIR_PERM)
+	perm, err := strconv.ParseUint(dirPerm, 8, 32)
+	if err != nil {
+		return 0775 // 默认权限
+	}
+	return os.FileMode(perm)
+}
 func markDir(path string) {
-	err := os.MkdirAll(path, 0777)
+	dirPerm := getDirPerm()
+	err := os.MkdirAll(path, dirPerm)
 	if err != nil {
 		log.Errorf("local mkdir: %s, Error: %v", path, err)
 	} else {
@@ -25,16 +49,17 @@ func markDir(path string) {
 	}
 }
 
-func MkDirs(v *nfs.Target, dir string) {
+func MkNFS3Dirs(v *nfs.Target, dir string) {
 	f, _, err := v.Lookup(dir)
 	if err == nil && f.IsDir() {
 		// already exists
 		return
 	}
-	if _, err := v.Mkdir(dir, 0775); err != nil {
+	dirPerm := getDirPerm()
+	if _, err := v.Mkdir(dir, dirPerm); err != nil {
 		if err.Error() == "file does not exist" {
-			MkDirs(v, filepath.Dir(dir))
-			v.Mkdir(dir, 0775)
+			MkNFS3Dirs(v, filepath.Dir(dir))
+			v.Mkdir(dir, dirPerm)
 		} else {
 			log.Errorf("nfs mkdir: %s, Error: %v", dir, err)
 			return
@@ -42,8 +67,6 @@ func MkDirs(v *nfs.Target, dir string) {
 	}
 	log.Infof("nfs mkdir: %s", dir)
 }
-
-const NFS_PATH_ENV_NAME = "NFS_PATH"
 
 func markNfsDir(cli *client.Client, volumeId string) {
 	volumeData, _ := cli.VolumeInspect(context.Background(), volumeId)
@@ -54,7 +77,10 @@ func markNfsDir(cli *client.Client, volumeId string) {
 		addr := volumeData.Options["o"]
 		addr = strings.Split(strings.TrimPrefix(addr, "addr="), ",")[0]
 		path := os.Getenv(NFS_PATH_ENV_NAME)
-
+		if path == "" {
+			log.Errorf("NFS_PATH environment variable is not set.")
+			return
+		}
 		paths := strings.Split(path, ",")
 		for _, p := range paths {
 			p = strings.TrimSpace(p)
@@ -75,8 +101,8 @@ func MkNfsDir(ip string, port string, nfsPath string, dir string) {
 	if port != "" {
 		server += ":" + port
 	}
-	// log.Infof("NFS Server: %s, NFS Path: %s dir: %s", server, nfsPath, dir)
-	mount, err := nfs.DialMount(server, false)
+
+	mount, err := nfs.DialMount(server, true)
 	if err != nil {
 		log.Errorf("unable to dial MOUNT service: %v", err)
 		return
@@ -90,7 +116,7 @@ func MkNfsDir(ip string, port string, nfsPath string, dir string) {
 		return
 	}
 	defer v.Close()
-	MkDirs(v, dir)
+	MkNFS3Dirs(v, dir)
 	v.Close()
 	mount.Close()
 }
@@ -111,7 +137,9 @@ func main() {
 			log.Errorf("Docker error event: %v", err)
 			return
 		case msg := <-msgs:
-			log.Infof("Event: %s      \t%s      \t%s \t%s", msg.Action, msg.Type, msg.Actor.ID, msg.Actor.Attributes["name"])
+			if !strings.HasPrefix(fmt.Sprintf("%v", msg.Action), "exec_") {
+				log.Infof("Event: %s %s  %s %s", msg.Action, msg.Type, msg.Actor.ID, msg.Actor.Attributes["name"])
+			}
 			if msg.Type == "service" && msg.Action == "create" {
 				// 服务创建时，挂载卷
 				data, _, _ := cli.ServiceInspectWithRaw(ctx, msg.Actor.ID, types.ServiceInspectOptions{})
